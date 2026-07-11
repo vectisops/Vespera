@@ -34,3 +34,34 @@ Vespera/
 ├── Modelfile                         # Dynamically compiled Ollama map
 ├── START-GUI.bat                     # Entrypoint initialization script
 └── Launch-Control-Center.bat         # Live production environment runner
+
+
+
+🚀 Rapid Deployment
+**Clone the repository and extract the full suite structure:
+
+Bash
+git clone [https://github.com/your-username/Vespera.git](https://github.com/your-username/Vespera.git)
+cd Vespera
+Launch the Orchestration Interface:
+Run the deployment engine directly via the main batch script:
+
+Bash
+.\START-GUI.bat
+Configure & Manifest:
+
+Select your hardware capability baseline from the prescan grid.
+
+Pick your target LLM architecture and initial operational profile.
+
+Click INSTALL VESPERA to let the pipeline fetch dependencies and generate clean system parameters.
+
+Boot Control Center:
+Once configuration is complete, fire up the application interface using Launch-Control-Center.bat.
+
+⚙️ Requirements
+OS: Windows 10/11 (with WSL2 enabled for advanced lab toolkits)
+
+Backend Runtime: Ollama Local Instance
+
+Execution Permissions: PowerShell script-execution capability enabled via standard local batch-bypass parameters.**
