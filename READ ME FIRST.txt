@@ -1,0 +1,32 @@
+================================================================================
+  VESPERA
+================================================================================
+
+  DOUBLE-CLICK THIS:
+
+      START HERE - Install Vespera.bat
+
+  Opens a dark modern installer GUI:
+    - Python + Ollama check/install
+    - Personality / role / goal
+    - Feature packs (AV, Vision, OSINT, Lab)
+    - Model download
+    - Launch Control Center
+
+--------------------------------------------------------------------------------
+  After install
+--------------------------------------------------------------------------------
+
+      After Install - Launch Control Center.bat
+
+--------------------------------------------------------------------------------
+  Folder layout
+--------------------------------------------------------------------------------
+
+  START HERE - Install Vespera.bat     <-- you are here
+  After Install - Launch Control Center.bat
+  READ ME FIRST.txt
+  app\                                 <-- software (ignore)
+
+Built: 20260711
+================================================================================
