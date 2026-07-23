@@ -1,10 +1,11 @@
 ---
 recommended_models:
-  - gemma3:12b
-  - llama3.1:8b
+  - hf.co/mlabonne/gemma-3-12b-it-abliterated-GGUF:Q5_K_M
+  - hf.co/bartowski/Llama-3.1-8B-Instruct-abliterated-GGUF:Q5_K_M
+  - dolphin-llama3:8b
   - mistral:7b
 min_vram_gb: 6
-notes: Good structured output and reasoning
+notes: Abliterated models preferred for high prompt acceptance on sensitive research framing.
 ---
 # OSINT Analyst Persona
 

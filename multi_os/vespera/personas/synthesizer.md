@@ -1,10 +1,11 @@
 ---
 recommended_models:
-  - gemma3:12b
+  - hf.co/mlabonne/gemma-3-12b-it-abliterated-GGUF:Q5_K_M
+  - hf.co/bartowski/Llama-3.1-8B-Instruct-abliterated-GGUF:Q5_K_M
+  - dolphin-llama3:8b
   - qwen2.5:14b
-  - llama3.1:8b
 min_vram_gb: 10
-notes: Multi-agent pipeline benefits from consistent, capable models
+notes: Prefer abliterated models for consistent multi-agent behaviour and low refusal.
 ---
 # Synthesizer Persona
 
