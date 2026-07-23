@@ -143,25 +143,120 @@ def list_personas_grouped() -> Dict[str, Dict[str, Path]]:
     return grouped
 
 
+def _parse_frontmatter(raw: str) -> tuple[dict, str]:
+    """
+    Parse optional YAML-like frontmatter from a persona file.
+
+    Supported form at the very top of the file:
+
+        ---
+        recommended_models:
+          - gemma3:12b
+          - llama3.1:8b
+        min_vram_gb: 8
+        notes: Good for long-context reasoning
+        ---
+
+    Returns (meta_dict, body_without_frontmatter).
+    If no valid frontmatter is present, returns ({}, original_text).
+    """
+    raw = raw.lstrip("\ufeff")  # strip BOM if any
+    if not raw.startswith("---"):
+        return {}, raw
+
+    parts = raw.split("---", 2)
+    if len(parts) < 3:
+        return {}, raw
+
+    fm_text = parts[1].strip()
+    body = parts[2].lstrip("\n")
+
+    meta: dict = {}
+    current_list_key = None
+
+    for line in fm_text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        # List item under a previous key
+        if stripped.startswith("- ") and current_list_key:
+            meta.setdefault(current_list_key, []).append(stripped[2:].strip().strip("\"\'"))
+            continue
+
+        if ":" in stripped:
+            key, _, val = stripped.partition(":")
+            key = key.strip()
+            val = val.strip().strip("\"\'")
+            current_list_key = None
+
+            if val == "":
+                # Likely a list key
+                current_list_key = key
+                meta[key] = []
+            else:
+                # Simple scalar – try int/float, else string
+                if val.lower() in ("true", "false"):
+                    meta[key] = val.lower() == "true"
+                else:
+                    try:
+                        meta[key] = int(val)
+                    except ValueError:
+                        try:
+                            meta[key] = float(val)
+                        except ValueError:
+                            meta[key] = val
+        else:
+            current_list_key = None
+
+    return meta, body
+
+
 def load_persona(name: str) -> str:
     """
-    Load a persona by name.
+    Load a persona by name (system prompt body only).
 
     Accepts either a plain stem ("intimate_partner") or a namespaced
     form ("explicit/intimate_partner") in case of collisions.
+    Frontmatter, if present, is stripped so the model only sees the prompt.
     """
+    path = _resolve_persona_path(name)
+    raw = path.read_text(encoding="utf-8")
+    _, body = _parse_frontmatter(raw)
+    return body
+
+
+def load_persona_meta(name: str) -> dict:
+    """
+    Return metadata (recommended_models, min_vram_gb, notes, …) for a persona.
+    Empty dict if the persona has no frontmatter.
+    """
+    path = _resolve_persona_path(name)
+    raw = path.read_text(encoding="utf-8")
+    meta, _ = _parse_frontmatter(raw)
+    return meta
+
+
+def _resolve_persona_path(name: str) -> Path:
     personas = list_personas()
 
-    # Direct hit
     if name in personas:
-        return personas[name].read_text(encoding="utf-8")
+        return personas[name]
 
-    # Try stripping a category prefix if the user passed one
     if "/" in name:
         bare = name.split("/", 1)[-1]
         if bare in personas:
-            return personas[bare].read_text(encoding="utf-8")
+            return personas[bare]
 
     raise FileNotFoundError(
         f"Persona '{name}' not found. Available: {sorted(personas.keys())}"
     )
+
+
+def get_recommended_models(name: str) -> list[str]:
+    """Convenience: return the recommended_models list for a persona (may be empty)."""
+    meta = load_persona_meta(name)
+    models = meta.get("recommended_models") or meta.get("recommended") or []
+    if isinstance(models, str):
+        models = [m.strip() for m in models.split(",") if m.strip()]
+    return list(models)
