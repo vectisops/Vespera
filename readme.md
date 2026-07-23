@@ -1,67 +1,153 @@
-# ⚡ VESPERA: Local AI Operator Stack
+# ⚡ VESPERA — Local AI Operator Stack
 
-Vespera is a hardened, fully local AI orchestration suite designed to embed powerful reasoning engines directly onto your lab environment. Outfitted with an automated deployment pipeline, dynamic hardware telemetry scanning, and an extensible persona architecture, Vespera bridges the gap between raw LLM weights and native local tooling (WSL, OSINT frameworks, and automation scripts).
+Fully local, offline-first AI operator stack with hardware-aware model recommendations, modular cognitive personas, optional multi-agent (quad-brain) orchestration, and both browser + pure-terminal interfaces.
+
+**Current primary path: Multi-OS Python** (Linux / macOS / Windows) on the `multi-os` branch.
 
 ![License](https://img.shields.io/badge/License-MIT-00FFC4?style=flat-flat)
-![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20WSL-38BDF8?style=flat-flat)
-![Engine](https://img.shields.io/badge/Backend-Ollama-A878FF?style=flat-flat)
+![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-38BDF8?style=flat-flat)
+![Backend](https://img.shields.io/badge/Backend-Ollama-A878FF?style=flat-flat)
 
 ---
 
-## 🛠️ Core Features
+## Project Structure (as of July 2026)
 
-* **Adaptive Hardware Telemetry Audit:** Automatically discovers your physical system RAM, queries discrete GPU VRAM registers, and maps out model quantization footprints on a real-time percentage compatibility scale to prevent Out-Of-Memory (OOM) crashes.
-* **Multi-Engine Seamless Handoff:** Fully automated background compilation that dynamically builds backend templates and catch-all safety stop token profiles—allowing you to shift between `Gemma 3`, `Hermes 3`, `Llama 3.2`, or `Qwen` completely hands-off via the GUI.
-* **Extensible Persona Arrays:** Decoupled runtime markdown configuration pipelines. Instantly swap active system personalities—from precise **Pure Logic** analytics to structured **OSINT / Recon Analysis** arrays—without leaving dual system prompt artifacts in your chat history.
-* **Asynchronous Cyberpunk UI:** A responsive, multi-threaded WPF dashboard built to isolate heavy package downloading or model manifesting onto safe background runspaces, keeping the UI completely fluid during high-overhead processes.
+| Component | Status | Location |
+|-----------|--------|----------|
+| **Multi-OS (Python)** | Active / Primary | `multi-os` branch → `multi_os/` |
+| **Legacy Windows Beta** | Archived reference | `main` branch → `VesperaV1-Beta.rar` + original PowerShell/WPF files |
+| **Mobile / APK track** | Early / planning | See `Vespera_Mobile_Vision_Upgrade_Dossier.pdf` (future dedicated `apk` branch) |
+
+The Multi-OS rewrite keeps the original conceptual flow (hardware prescan → persona selection → model → Control Center) while making everything portable in pure Python.
 
 ---
 
-## 📦 Directory Architecture
+## 1. Multi-OS (Recommended)
 
-```text
-Vespera/
-├── app/
-│   ├── setup/
-│   │   ├── personas/                 # Modular .md profile templates
-│   │   │   ├── pure_logic.md
-│   │   │   └── osint_analyst.md
-│   │   └── Install-Vespera-GUI.ps1   # Hardware scanner & WPF UI
-│   ├── Install-Vespera.ps1           # Main environment compiler loop
-│   └── Launch-UI.ps1                 # Local application dashboard
-├── config/
-│   └── operator.json                 # Active environment state array
-├── Modelfile                         # Dynamically compiled Ollama map
-├── START-GUI.bat                     # Entrypoint initialization script
-└── Launch-Control-Center.bat         # Live production environment runner
+Cross-platform Python operator stack.
 
+### Features
+- Hardware prescan (system RAM, discrete GPU VRAM, conservative quantisation matrix)
+- Modular personas (`pure_logic`, `osint_analyst` + multi-agent set: strategist / executor / critic / synthesizer)
+- Sequential multi-agent pipeline that produces a clean synthesised answer
+- Gradio web Control Center + Textual pure-terminal TUI
+- CLI: `scan`, `status`, `personas`, `chat`, `multi`, `ui`, `tui`, `tools`
+- Optional capability packs (image/video gen, voice STT/TTS, local search, network diagnostics) — graceful if backends missing
+- Ollama backend (official client + HTTP fallback)
 
+### Quick start (all platforms)
 
-🚀 Rapid Deployment
-**Clone the repository and extract the full suite structure:
-
-Bash
-git clone [https://github.com/your-username/Vespera.git](https://github.com/your-username/Vespera.git)
+```bash
+git clone https://github.com/vectisops/Vespera.git
 cd Vespera
-Launch the Orchestration Interface:
-Run the deployment engine directly via the main batch script:
+git checkout multi-os
+cd multi_os
 
-Bash
-.\START-GUI.bat
-Configure & Manifest:
+python -m venv .venv
+# Linux / macOS:
+source .venv/bin/activate
+# Windows:
+# .venv\Scripts\activate
 
-Select your hardware capability baseline from the prescan grid.
+pip install -r requirements.txt
 
-Pick your target LLM architecture and initial operational profile.
+python -m vespera scan          # hardware + quant advice
+python -m vespera ui            # web Control Center → http://127.0.0.1:7860
+python -m vespera tui           # pure terminal TUI (air-gapped friendly)
+```
 
-Click INSTALL VESPERA to let the pipeline fetch dependencies and generate clean system parameters.
+Full details, tools, directory layout and roadmap:  
+**[multi_os/README.md](https://github.com/vectisops/Vespera/blob/multi-os/multi_os/README.md)**
 
-Boot Control Center:
-Once configuration is complete, fire up the application interface using Launch-Control-Center.bat.
+---
 
-⚙️ Requirements
-OS: Windows 10/11 (with WSL2 enabled for advanced lab toolkits)
+### Short OS guides
 
-Backend Runtime: Ollama Local Instance
+#### Linux
+```bash
+# After clone + checkout multi-os + cd multi_os
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-Execution Permissions: PowerShell script-execution capability enabled via standard local batch-bypass parameters.**
+# Optional helper
+./scripts/launch.sh
+
+# Preferred environment for air-gapped / offline work
+python -m vespera tui
+```
+Requires: Python 3.10+, Ollama installed and running, optional `nvidia-ml-py` for better VRAM reporting.
+
+#### macOS
+```bash
+# After clone + checkout multi-os + cd multi_os
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+python -m vespera scan
+python -m vespera ui
+```
+Ollama uses Metal acceleration automatically. Same Python requirements as Linux.
+
+#### Windows
+```powershell
+# After clone + checkout multi-os + cd multi_os
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+python -m vespera scan
+python -m vespera ui
+
+# Optional helper
+.\scripts\launch.ps1
+```
+Native Python path works; WSL2 is optional for extra tooling. PowerShell execution policy may need adjusting for the helper script.
+
+---
+
+## 2. Legacy Windows-Only Beta
+
+The original release (July 2026) was a Windows / PowerShell / WPF stack distributed as `VesperaV1-Beta.rar`.
+
+It provided:
+- Adaptive hardware telemetry + quantisation compatibility grid
+- Automated backend compilation for multiple models
+- Extensible markdown persona system
+- Asynchronous WPF dashboard
+
+**Still available on this (`main`) branch for historical reference.**  
+Double-click `START HERE - Install Vespera.bat` (or the RAR contents) if you specifically need the old Windows GUI installer. New work should use the Multi-OS path above.
+
+---
+
+## 3. Mobile / APK Track
+
+Early mobile (Android) work is documented in:
+
+**`Vespera_Mobile_Vision_Upgrade_Dossier.pdf`**
+
+This covers the vision for an Android companion / operator client (APK). A dedicated `apk` branch is planned for the actual application code, build scripts and packaging once the multi-OS core is stable. The dossier remains the current reference for the mobile direction.
+
+---
+
+## Requirements (Multi-OS)
+
+- Python 3.10+
+- [Ollama](https://ollama.com) running locally (default `http://127.0.0.1:11434`)
+- Packages in `multi_os/requirements.txt`
+- Optional: NVIDIA drivers + `nvidia-ml-py`, Automatic1111 / ComfyUI, SearXNG, piper, faster-whisper, etc. for extended tools (see `multi_os/docs/TOOLS.md`)
+
+---
+
+## License
+
+MIT
+
+---
+
+**Start here for new installs:**  
+```bash
+git clone https://github.com/vectisops/Vespera.git && cd Vespera && git checkout multi-os && cd multi_os
+```
