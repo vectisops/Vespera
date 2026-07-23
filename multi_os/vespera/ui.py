@@ -5,12 +5,18 @@ Works identically on Linux, macOS, and Windows.
 
 from __future__ import annotations
 
-import json
 from typing import List, Tuple
 
 import gradio as gr
 
-from .config import load_config, save_config, list_personas, load_persona
+from .config import (
+    load_config,
+    save_config,
+    list_personas,
+    load_persona,
+    get_recommended_models,
+    load_persona_meta,
+)
 from .hardware import scan_hardware
 from .ollama_client import OllamaClient
 
@@ -40,23 +46,85 @@ def get_hardware_text() -> str:
     return "\n".join(lines)
 
 
-def get_model_choices() -> List[str]:
+def get_installed_models() -> List[str]:
     cfg = load_config()
     client = OllamaClient(cfg.get("ollama_host", "http://127.0.0.1:11434"))
     if not client.is_available():
-        return ["(Ollama not reachable)"]
+        return []
     models = client.list_models()
     names = []
     for m in models:
         name = m.get("name") or m.get("model")
         if name:
             names.append(name)
-    return names or ["(no models pulled yet)"]
+    return names
+
+
+def build_model_choices(persona: str | None = None) -> List[str]:
+    """
+    Build the model dropdown list.
+
+    - Always include models currently installed in Ollama.
+    - Also include any recommended models for the selected persona
+      (even if not yet pulled) so the user can see what to install.
+    - Recommended models that are installed are listed first.
+    """
+    installed = get_installed_models()
+    recommended = get_recommended_models(persona) if persona else []
+
+    # Preserve order: recommended-and-installed → other installed → recommended-not-installed
+    ordered: List[str] = []
+    seen = set()
+
+    for m in recommended:
+        if m in installed and m not in seen:
+            ordered.append(m)
+            seen.add(m)
+
+    for m in installed:
+        if m not in seen:
+            ordered.append(m)
+            seen.add(m)
+
+    for m in recommended:
+        if m not in seen:
+            ordered.append(f"{m}  (recommended – not installed)")
+            seen.add(m)
+
+    if not ordered:
+        ordered = ["(Ollama not reachable / no models)"]
+    return ordered
+
+
+def format_recommendation_text(persona: str) -> str:
+    meta = load_persona_meta(persona)
+    recs = get_recommended_models(persona)
+    if not recs and not meta:
+        return "_No specific model recommendation for this persona yet._"
+
+    lines = []
+    if recs:
+        lines.append("**Recommended models:**")
+        installed = set(get_installed_models())
+        for m in recs:
+            mark = "✅" if m in installed else "⬇️ not installed"
+            lines.append(f"- `{m}`  {mark}")
+
+    if meta.get("min_vram_gb"):
+        lines.append(f"\n**Min VRAM guidance:** ~{meta['min_vram_gb']} GB")
+    if meta.get("notes"):
+        lines.append(f"\n**Notes:** {meta['notes']}")
+
+    return "\n".join(lines)
 
 
 def chat_fn(message: str, history: List[Tuple[str, str]], model: str, persona: str):
     if not message.strip():
         return history, ""
+
+    # Strip the " (recommended – not installed)" suffix if present
+    if model and " (recommended" in model:
+        model = model.split(" (recommended")[0].strip()
 
     cfg = load_config()
     try:
@@ -70,7 +138,6 @@ def chat_fn(message: str, history: List[Tuple[str, str]], model: str, persona: s
         history = history + [(message, "Ollama is not reachable. Start `ollama serve` first.")]
         return history, ""
 
-    # Build messages from history + system
     messages = [{"role": "system", "content": system}]
     for user, assistant in history:
         messages.append({"role": "user", "content": user})
@@ -90,17 +157,37 @@ def chat_fn(message: str, history: List[Tuple[str, str]], model: str, persona: s
     return history, ""
 
 
+def on_persona_change(persona: str):
+    """Update recommendation text + model dropdown when persona changes."""
+    rec_text = format_recommendation_text(persona)
+    choices = build_model_choices(persona)
+    # Prefer the first recommended model that is installed, else first choice
+    value = choices[0] if choices else None
+    recs = get_recommended_models(persona)
+    installed = set(get_installed_models())
+    for m in recs:
+        if m in installed:
+            value = m
+            break
+    return rec_text, gr.update(choices=choices, value=value)
+
+
 def build_ui():
     cfg = load_config()
-    persona_names = list(list_personas().keys()) or ["pure_logic"]
-    model_choices = get_model_choices()
+    persona_names = sorted(list_personas().keys()) or ["pure_logic"]
+    active = cfg.get("active_persona", persona_names[0])
+    if active not in persona_names:
+        active = persona_names[0]
+
+    initial_models = build_model_choices(active)
+    initial_rec = format_recommendation_text(active)
 
     with gr.Blocks(
         title="Vespera Control Center",
         theme=gr.themes.Soft(primary_hue="cyan", neutral_hue="slate"),
         css="""
         .gradio-container { max-width: 1100px !important; }
-        """
+        """,
     ) as demo:
         gr.Markdown(
             """
@@ -114,15 +201,24 @@ def build_ui():
             with gr.Row():
                 persona_dd = gr.Dropdown(
                     choices=persona_names,
-                    value=cfg.get("active_persona", persona_names[0]),
+                    value=active,
                     label="Persona",
                 )
                 model_dd = gr.Dropdown(
-                    choices=model_choices,
-                    value=cfg.get("default_model") if cfg.get("default_model") in model_choices else (model_choices[0] if model_choices else None),
+                    choices=initial_models,
+                    value=initial_models[0] if initial_models else None,
                     label="Model",
                     allow_custom_value=True,
                 )
+
+            rec_md = gr.Markdown(initial_rec)
+
+            persona_dd.change(
+                on_persona_change,
+                inputs=[persona_dd],
+                outputs=[rec_md, model_dd],
+            )
+
             chatbot = gr.Chatbot(height=480, label="Conversation")
             msg = gr.Textbox(placeholder="Message Vespera…", label="Input", lines=2)
             with gr.Row():
@@ -153,13 +249,13 @@ def build_ui():
                 c = load_config()
                 client = OllamaClient(c.get("ollama_host", "http://127.0.0.1:11434"))
                 ok = client.is_available()
-                models = get_model_choices() if ok else []
+                models = get_installed_models() if ok else []
                 text = (
                     f"**Ollama reachable:** {'✅ Yes' if ok else '❌ No'}\n\n"
                     f"**Active persona:** `{c.get('active_persona')}`\n\n"
                     f"**Default model:** `{c.get('default_model')}`\n\n"
                     f"**Configured host:** `{c.get('ollama_host')}`\n\n"
-                    f"**Models visible:** {', '.join(models[:10]) if models else 'none'}"
+                    f"**Models visible:** {', '.join(models[:12]) if models else 'none'}"
                 )
                 return text
 
