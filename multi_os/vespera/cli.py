@@ -37,14 +37,23 @@ def scan():
 
 @app.command()
 def personas():
-    """List available cognitive personas."""
-    ps = list_personas()
-    table = Table(title="Available Personas")
-    table.add_column("Name", style="cyan")
-    table.add_column("Path")
-    for name, path in sorted(ps.items()):
-        table.add_row(name, str(path))
-    console.print(table)
+    """List available cognitive personas (including nested folders)."""
+    from .config import list_personas_grouped
+
+    grouped = list_personas_grouped()
+    if not grouped:
+        console.print("[yellow]No personas found.[/]")
+        return
+
+    for category in sorted(grouped.keys()):
+        title = "Root" if category == "_root" else category.replace("_", " ").title()
+        table = Table(title=f"Personas – {title}")
+        table.add_column("Name", style="cyan")
+        table.add_column("File")
+        for name, path in sorted(grouped[category].items()):
+            table.add_row(name, path.name)
+        console.print(table)
+        console.print()
 
 
 @app.command()
