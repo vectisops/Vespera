@@ -174,6 +174,55 @@ def tui():
     tui_main()
 
 
+@app.command()
+def tools():
+    """List expanded tool packs (media, voice, search, net)."""
+    from .tools import list_tools, tool_status
+    table = Table(title="Vespera Tools")
+    table.add_column("Name", style="cyan")
+    table.add_column("Pack")
+    table.add_column("Description")
+    for t in list_tools():
+        table.add_row(t["name"], t["pack"], t["desc"])
+    console.print(table)
+    console.print("\n[bold]Backend status[/]")
+    import json
+    console.print(json.dumps(tool_status(), indent=2))
+
+
+@app.command("tool")
+def tool_run(
+    name: str = typer.Argument(..., help="Tool name, e.g. search.web or net.diag"),
+    arg: Optional[str] = typer.Option(None, "--arg", "-a", help="Primary string argument (prompt/query/host/path)"),
+    json_args: Optional[str] = typer.Option(None, "--json", help="Extra JSON object of kwargs"),
+):
+    """Run a registered tool."""
+    from .tools import run_tool
+    import json as _json
+    kwargs = {}
+    if json_args:
+        kwargs.update(_json.loads(json_args))
+    if arg is not None:
+        if name.startswith("search"):
+            kwargs.setdefault("query", arg)
+        elif name.startswith("image") or name.startswith("video"):
+            kwargs.setdefault("prompt", arg)
+        elif name.startswith("net.diag"):
+            kwargs.setdefault("host", arg)
+        elif name.startswith("voice.stt"):
+            kwargs.setdefault("audio_path", arg)
+        elif name.startswith("voice.tts"):
+            kwargs.setdefault("text", arg)
+        else:
+            kwargs.setdefault("prompt", arg)
+    try:
+        result = run_tool(name, **kwargs)
+    except Exception as e:
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(1)
+    console.print_json(data=result if not isinstance(result, str) else {"result": result})
+
+
 def main():
     app()
 
